@@ -1,7 +1,7 @@
 {%- set schema_name,
         customer_table_name,
         customer_tag_table_name
-        = 'shopify_raw', 'customer','customer_tag' -%}
+        = 'shopify_raw_us', 'customer','customer_tag' -%}
         
 {%- set selected_fields = [
     "id",
@@ -11,8 +11,8 @@
     "created_at"
 ] -%}
 
-{%- set customer_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'customer') -%}
-{%- set tag_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'customer_tag') -%}
+{%- set customer_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'customer') -%}
+{%- set tag_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'customer_tag') -%}
 
 WITH customer_raw_data AS 
     ({{ dbt_utils.union_relations(relations = customer_raw_tables) }}),
