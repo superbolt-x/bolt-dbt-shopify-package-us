@@ -2,7 +2,7 @@
         product_table_name, 
         variant_table_name,
         tag_table_name
-        = 'shopify_raw', 'product', 'product_variant', 'product_tag'-%}
+        = 'shopify_raw_us', 'product', 'product_variant', 'product_tag'-%}
 
 {%- set product_selected_fields = [
     "id",
@@ -23,9 +23,9 @@
     "sku"
 ] -%}
 
-{%- set product_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'product') -%}
-{%- set variant_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'product_variant') -%}
-{%- set tag_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'product_tag') -%}
+{%- set product_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'product') -%}
+{%- set variant_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'product_variant') -%}
+{%- set tag_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'product_tag') -%}
 
 WITH product_raw_data AS 
     ({{ dbt_utils.union_relations(relations = product_raw_tables) }}),
