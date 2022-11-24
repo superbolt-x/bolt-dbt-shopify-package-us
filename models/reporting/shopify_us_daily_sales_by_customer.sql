@@ -4,7 +4,7 @@
 
 WITH orders AS 
     (SELECT *
-    FROM {{ ref('shopify_daily_sales_by_order') }}
+    FROM {{ ref('shopify_us_daily_sales_by_order') }}
     ),
 
     refunds AS 
@@ -12,7 +12,7 @@ WITH orders AS
         customer_id, 
         COALESCE(SUM(refunded),0) as returns,
         COALESCE(SUM(net_payment),0) as net_payment
-    FROM {{ ref('shopify_daily_sales_by_transaction') }}
+    FROM {{ ref('shopify_us_daily_sales_by_transaction') }}
     GROUP BY date, customer_id
     ),
 
