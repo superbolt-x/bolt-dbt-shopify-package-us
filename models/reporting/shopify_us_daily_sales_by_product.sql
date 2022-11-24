@@ -1,21 +1,21 @@
 {{ config (
-    alias = target.database + '_shopify_daily_sales_by_product'
+    alias = target.database + '_shopify_us_daily_sales_by_product'
 )}}
 
 
 WITH orders AS 
     (SELECT *
-    FROM {{ ref('shopify_daily_sales_by_order') }}
+    FROM {{ ref('shopify_us_daily_sales_by_order') }}
     ),
 
     line_items AS 
     (SELECT *
-    FROM {{ ref('shopify_line_items') }}
+    FROM {{ ref('shopify_us_line_items') }}
     ),
 
     products AS 
     (SELECT DISTINCT product_id, product_title, product_type, product_tags
-    FROM {{ ref('shopify_products') }}
+    FROM {{ ref('shopify_us_products') }}
     ),
 
     sales AS 
