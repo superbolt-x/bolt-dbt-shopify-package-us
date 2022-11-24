@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: shopify_raw
+    schema: shopify_raw
+    tables:
+      - name: order
+        freshness: 
+          warn_after: {count: 6, period: hour}
+
+        loaded_at_field: _fivetran_synced
+      
+      - name: order_discount_code
+      - name: order_shipping_line
+      - name: order_tag
+      - name: order_adjustment
+      - name: transaction
+      - name: order_line
+      - name: order_line_refund
+      - name: product
+      - name: product_variant
+      - name: product_tag
+      - name: refund
+      - name: customer
+      - name: customer_tag
+
+models:
+  - name: shopify_orders
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+          - not_null
+  - name: shopify_line_items
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+          - not_null
+  - name: shopify_daily_sales_by_order_line_item
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+  - name: shopify_customers
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+          - not_null
+  - name: shopify_daily_sales_by_customer
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+  - name: shopify_products
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+          - not_null
+  - name: shopify_daily_sales_by_product
+    columns: 
+      - name: unique_key
+        tests:
+          - unique
