@@ -12,9 +12,9 @@
 
 {%- set schema_name,
         table_name
-        = 'shopify_raw', 'transaction' -%}
+        = 'shopify_raw_us', 'transaction' -%}
 
-{%- set raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw%', 'transaction') -%}
+{%- set raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'transaction') -%}
 
 WITH raw_data AS 
     ({{ dbt_utils.union_relations(relations = raw_tables) }}
