@@ -1,5 +1,5 @@
 {{ config (
-    alias = target.database + '_shopify_sales'
+    alias = target.database + '_shopify_us_sales'
 )}}
 
 {%- set date_granularity_list = ['day','week','month','quarter','year'] -%}
@@ -14,7 +14,7 @@ WITH
         SUM(paid_by_customer) as paid_by_customer,
         SUM(refunded) as refunded,
         SUM(net_payment) as net_payment
-    FROM {{ ref('shopify_daily_sales_by_transaction') }}
+    FROM {{ ref('shopify_us_daily_sales_by_transaction') }}
     GROUP BY date_granularity, {{date_granularity}}
     ),
 
@@ -39,7 +39,7 @@ WITH
         COALESCE(SUM(gross_revenue-COALESCE(total_discounts,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0)),0) as total_sales,
         COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue-COALESCE(total_discounts,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as first_order_total_sales,
         COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue-COALESCE(total_discounts,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as repeat_order_total_sales
-    FROM {{ ref('shopify_daily_sales_by_order') }}
+    FROM {{ ref('shopify_us_daily_sales_by_order') }}
     GROUP BY date_granularity, {{date_granularity}})
     {%- if not loop.last %},{%- endif %}
     {%- endfor %}
