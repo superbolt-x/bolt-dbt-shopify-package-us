@@ -1,5 +1,5 @@
 {{ config (
-    alias = target.database + '_shopify_daily_sales_by_customer'
+    alias = target.database + '_shopify_us_daily_sales_by_customer'
 )}}
 
 WITH orders AS 
