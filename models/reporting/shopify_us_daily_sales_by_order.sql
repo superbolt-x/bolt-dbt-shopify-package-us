@@ -1,5 +1,5 @@
 {{ config (
-    alias = target.database + '_shopify_daily_sales_by_order',
+    alias = target.database + '_shopify_us_daily_sales_by_order',
     materialized='incremental',
     unique_key='unique_key'
 )}}
@@ -18,7 +18,7 @@ WITH giftcard_deduction AS
             SUM(quantity) as items_count,
             COALESCE(SUM(CASE WHEN gift_card = 'true' THEN quantity END),0) as giftcard_count,
             COALESCE(SUM(CASE WHEN gift_card = 'true' THEN price * quantity END),0) as giftcard_deduction
-        FROM {{ ref('shopify_line_items') }}
+        FROM {{ ref('shopify_us_line_items') }}
         GROUP BY 1)
     ),
 
@@ -36,7 +36,7 @@ WITH giftcard_deduction AS
         shipping_price, 
         total_revenue,
         order_tags
-    FROM {{ ref('shopify_orders') }}
+    FROM {{ ref('shopify_us_orders') }}
     LEFT JOIN giftcard_deduction USING(order_id)
     WHERE giftcard_only = 'false'
     AND cancelled_at IS NULL
@@ -52,7 +52,7 @@ WITH giftcard_deduction AS
 
     customers AS 
     (SELECT customer_id, customer_acquisition_date, customer_tags
-    FROM {{ ref('shopify_customers') }}
+    FROM {{ ref('shopify_us_customers') }}
     )
 
 SELECT *,
