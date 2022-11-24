@@ -25,41 +25,41 @@ sources:
       - name: customer_tag
 
 models:
-  - name: shopify_orders
+  - name: shopify_orders_us
     columns:
       - name: unique_key
         tests:
           - unique
           - not_null
-  - name: shopify_line_items
+  - name: shopify_line_items_us
     columns:
       - name: unique_key
         tests:
           - unique
           - not_null
-  - name: shopify_daily_sales_by_order_line_item
+  - name: shopify_us_daily_sales_by_order_line_item
     columns:
       - name: unique_key
         tests:
           - unique
-  - name: shopify_customers
-    columns:
-      - name: unique_key
-        tests:
-          - unique
-          - not_null
-  - name: shopify_daily_sales_by_customer
-    columns:
-      - name: unique_key
-        tests:
-          - unique
-  - name: shopify_products
+  - name: shopify_us_customers
     columns:
       - name: unique_key
         tests:
           - unique
           - not_null
-  - name: shopify_daily_sales_by_product
+  - name: shopify_us_daily_sales_by_customer
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+  - name: shopify_us_products
+    columns:
+      - name: unique_key
+        tests:
+          - unique
+          - not_null
+  - name: shopify_us_daily_sales_by_product
     columns: 
       - name: unique_key
         tests:
