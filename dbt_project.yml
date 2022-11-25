@@ -2,7 +2,7 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'bolt_dbt_shopify_package_waldo_us'
+name: 'bolt_dbt_shopify_package_us'
 version: '1.0.0'
 config-version: 2
 
@@ -34,7 +34,7 @@ vars:
     sales_channel_exclusion: 'dummy' # exclude orders that came from certain sales channels from analytics e.g. 'channel1|channel2'
 
 models:
-  bolt_dbt_shopify_package_waldo_us:
+  bolt_dbt_shopify_package_us:
     base:
       +schema: shopify_base
       +materialized: table
