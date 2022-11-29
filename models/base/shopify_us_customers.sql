@@ -1,8 +1,3 @@
-{%- set schema_name,
-        customer_table_name,
-        customer_tag_table_name
-        = 'shopify_raw_us', 'customer','customer_tag' -%}
-        
 {%- set selected_fields = [
     "id",
     "first_name",
@@ -11,13 +6,12 @@
     "created_at"
 ] -%}
 
-{%- set customer_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'customer') -%}
-{%- set tag_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'customer_tag') -%}
+{%- set schema_name,
+        customer_table_name,
+        customer_tag_table_name
+        = 'shopify_raw_us', 'customer','customer_tag' -%}
 
-WITH customer_raw_data AS 
-    ({{ dbt_utils.union_relations(relations = customer_raw_tables) }}),
-
-    customers AS 
+WITH customers AS 
     (SELECT 
 
         {% for column in selected_fields -%}
@@ -25,20 +19,23 @@ WITH customer_raw_data AS
         {%- if not loop.last %},{% endif %}
         {% endfor %}
 
-    FROM customer_raw_data
-    ),
+    FROM {{ source(schema_name, customer_table_name) }}
+    )
 
-    tag_raw_data AS 
-    ({{ dbt_utils.union_relations(relations = tag_raw_tables) }}),
+    {%- set tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) %}
+    {%- if tag_table_exists %}
 
-    tags AS 
+    ,tags AS 
     (SELECT customer_id, LISTAGG(value, ', ') WITHIN GROUP (ORDER BY index) as customer_tags
-    FROM tag_raw_data
+    FROM {{ source(schema_name, customer_tag_table_name) }}
     GROUP BY customer_id
     )
+    {%- endif %}
 
 
 SELECT *,
     customer_id as unique_key
 FROM customers 
+{%- if tag_table_exists %}
 LEFT JOIN tags USING(customer_id)
+{%- endif %}

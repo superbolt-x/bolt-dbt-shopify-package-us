@@ -5,6 +5,10 @@
 )}}
 
 
+{%- set schema_name,
+        customer_tag_table_name
+        = 'shopify_raw_us', 'customer_tag' -%}
+
 {%- set sales_channel_exclusion_list = "'"~var("sales_channel_exclusion").split('|')|join("','")~"'" -%}
 
 WITH giftcard_deduction AS 
@@ -50,8 +54,12 @@ WITH giftcard_deduction AS
     {% endif %}
     ),
 
+    {% set customer_tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) -%}
     customers AS 
-    (SELECT customer_id, customer_acquisition_date, customer_tags
+    (SELECT customer_id, customer_acquisition_date
+        {%- if customer_tag_table_exists %}
+        , customer_tags
+        {%- endif %}
     FROM {{ ref('shopify_us_customers') }}
     )
 

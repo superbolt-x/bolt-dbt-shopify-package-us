@@ -5,6 +5,11 @@
 )}}
 
 
+{%- set schema_name,
+        customer_tag_table_name,
+        product_tag_table_name
+        = 'shopify_raw_us', 'customer_tag', 'product_tag'-%}
+
 WITH orders AS 
     (SELECT *
     FROM {{ ref('shopify_us_daily_sales_by_order') }}
@@ -21,13 +26,21 @@ WITH orders AS
     FROM {{ ref('shopify_us_line_items') }}
     ),
 
+    {% set product_tag_table_exists = check_source_exists(schema_name, product_tag_table_name) -%}
     products AS 
-    (SELECT product_id, variant_id, product_type, product_tags
+    (SELECT product_id, variant_id, product_type
+        {%- if product_tag_table_exists %}
+        , product_tags
+        {%- endif %}
     FROM {{ ref('shopify_us_products') }}
     ),
     
+    {% set customer_tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) -%}
     customers AS 
-    (SELECT customer_id, customer_acquisition_date, customer_tags
+    (SELECT customer_id, customer_acquisition_date
+        {%- if customer_tag_table_exists %}
+        , customer_tags
+        {%- endif %}
     FROM {{ ref('shopify_us_customers') }}
     ),
 
