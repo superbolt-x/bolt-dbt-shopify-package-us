@@ -5,20 +5,9 @@
 )}}
 
 
-{%- set schema_name,
-        customer_tag_table_name,
-        product_tag_table_name
-        = 'shopify_raw_us', 'customer_tag', 'product_tag'-%}
-
 WITH orders AS 
     (SELECT *
     FROM {{ ref('shopify_us_daily_sales_by_order') }}
-    {% if is_incremental() -%}
-
-    -- this filter will only be applied on an incremental run
-    WHERE date >= (select max(date)-90 from {{ this }})
-
-    {% endif %}
     ),
 
     line_items AS 
@@ -26,27 +15,20 @@ WITH orders AS
     FROM {{ ref('shopify_us_line_items') }}
     ),
 
-    {% set product_tag_table_exists = check_source_exists(schema_name, product_tag_table_name) -%}
     products AS 
-    (SELECT product_id, variant_id, product_type
-        {%- if product_tag_table_exists %}
-        , product_tags
-        {%- endif %}
+    (SELECT product_id, variant_id, product_type, product_tags
     FROM {{ ref('shopify_us_products') }}
     ),
     
-    {% set customer_tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) -%}
     customers AS 
     (SELECT customer_id, customer_acquisition_date
-        {%- if customer_tag_table_exists %}
-        , customer_tags
-        {%- endif %}
     FROM {{ ref('shopify_us_customers') }}
     ),
 
     sales AS 
     (SELECT 
-        date, 
+        date,
+        cancelled_at,
         order_id, 
         customer_id,
         customer_order_index,
@@ -58,6 +40,7 @@ WITH orders AS
         product_title,
         variant_title,
         item_title,
+        index,
         gift_card,
         price,
         quantity,
