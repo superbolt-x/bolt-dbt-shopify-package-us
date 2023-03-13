@@ -31,8 +31,11 @@
 
 {%- elif table_name == 'order_shipping_line' -%}
 
-    {%- if column_name == 'discounted_price' -%}
+    {%- if column_name == 'price' -%}
         {{column_name}} as shipping_price
+    
+    {%- elif column_name == 'discounted_price' -%}
+        {{column_name}} as discounted_shipping_price
 
     {%- elif column_name != 'order_id' -%}
         {{column_name}} as shipping_{{column_name}}
@@ -70,6 +73,9 @@
 
     {%- elif column_name == 'title' -%}
         {{column_name}} as product_title
+    
+    {%- elif column_name == 'total_discount' -%}
+        {{column_name}} as line_{{column_name}}
 
     {%- else -%}
     {{column_name}}
