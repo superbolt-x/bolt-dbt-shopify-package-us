@@ -3,10 +3,6 @@
 )}}
 
 
-{%- set schema_name,
-        product_tag_table_name
-        = 'shopify_raw_us', 'product_tag'-%}
-
 WITH orders AS 
     (SELECT *
     FROM {{ ref('shopify_us_daily_sales_by_order') }}
@@ -17,12 +13,8 @@ WITH orders AS
     FROM {{ ref('shopify_us_line_items') }}
     ),
 
-    {% set product_tag_table_exists = check_source_exists(schema_name, product_tag_table_name) -%}
     products AS 
-    (SELECT DISTINCT product_id, product_title, product_type
-        {%- if product_tag_table_exists %}
-        , product_tags
-        {%- endif %}
+    (SELECT DISTINCT product_id, product_title, product_type, product_tags
     FROM {{ ref('shopify_us_products') }}
     ),
 
