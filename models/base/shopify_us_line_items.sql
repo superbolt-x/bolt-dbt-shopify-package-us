@@ -1,3 +1,8 @@
+{%- set schema_name,
+        item_table_name, 
+        item_fund_table_name
+        = 'shopify_raw_us', 'order_line', 'order_line_refund' -%}
+
 {%- set item_selected_fields = [
     "order_id",
     "id",
@@ -23,12 +28,13 @@
     "subtotal"
 ] -%}
 
-{%- set schema_name,
-        item_table_name, 
-        item_fund_table_name
-        = 'shopify_raw_us', 'order_line', 'order_line_refund' -%}
+{%- set order_line_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'order_line') -%}
+{%- set order_line_refund_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'order_line_refund') -%}
 
-WITH items AS 
+WITH order_line_raw_data AS 
+    ({{ dbt_utils.union_relations(relations = order_line_raw_tables) }}),
+
+    items AS 
     (SELECT 
 
         {% for column in item_selected_fields -%}
@@ -36,7 +42,11 @@ WITH items AS
         {%- if not loop.last %},{% endif %}
         {% endfor %}
 
-    FROM {{ source(schema_name, item_table_name) }}),
+    FROM order_line_raw_data
+    ),
+
+    order_line_refund_raw_data AS 
+    ({{ dbt_utils.union_relations(relations = order_line_refund_raw_tables) }}),
 
     refund_raw AS 
     (SELECT 
@@ -46,7 +56,8 @@ WITH items AS
         {%- if not loop.last %},{% endif %}
         {% endfor %}
 
-    FROM {{ source(schema_name, item_fund_table_name) }}),
+    FROM order_line_refund_raw_data
+    ),
 
     refund AS 
     (SELECT 
