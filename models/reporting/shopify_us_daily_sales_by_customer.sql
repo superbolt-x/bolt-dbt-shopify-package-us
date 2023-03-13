@@ -2,10 +2,6 @@
     alias = target.database + '_shopify_us_daily_sales_by_customer'
 )}}
 
-{%- set schema_name,
-        customer_tag_table_name
-        = 'shopify_raw_us', 'customer_tag' -%}
-
 WITH orders AS 
     (SELECT *
     FROM {{ ref('shopify_us_daily_sales_by_order') }}
@@ -20,12 +16,8 @@ WITH orders AS
     GROUP BY date, customer_id
     ),
 
-    {% set customer_tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) -%}
     customers AS 
     (SELECT customer_id, customer_acquisition_date
-        {%- if customer_tag_table_exists %}
-        , customer_tags
-        {%- endif %}
     FROM {{ ref('shopify_us_customers') }} 
     ),
 
@@ -43,11 +35,11 @@ WITH orders AS
             COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue END),0) as first_order_gross_sales,
             COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue END),0) as repeat_order_gross_sales,
             SUM(subtotal_revenue) as subtotal_sales,
-            COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue-COALESCE(total_discounts,0) END),0) as first_order_subtotal_sales,
-            COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue-COALESCE(total_discounts,0) END),0) as repeat_order_subtotal_sales,
+            COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue-COALESCE(subtotal_discount+shipping_discount,0) END),0) as first_order_subtotal_sales,
+            COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue-COALESCE(subtotal_discount+shipping_discount,0) END),0) as repeat_order_subtotal_sales,
             SUM(total_revenue) as total_revenue,
-            COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue-COALESCE(total_discounts,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as first_order_total_sales,
-            COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue-COALESCE(total_discounts,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as repeat_order_total_sales
+            COALESCE(SUM(CASE WHEN customer_order_index = 1 THEN gross_revenue-COALESCE(subtotal_discount+shipping_discount,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as first_order_total_sales,
+            COALESCE(SUM(CASE WHEN customer_order_index > 1 THEN gross_revenue-COALESCE(subtotal_discount+shipping_discount,0)+COALESCE(total_tax,0)+COALESCE(shipping_price,0) END),0) as repeat_order_total_sales
         FROM orders
         GROUP BY date, customer_id)
     LEFT JOIN refunds USING(date, customer_id)
