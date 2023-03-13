@@ -5,10 +5,6 @@
 )}}
 
 
-{%- set schema_name,
-        customer_tag_table_name
-        = 'shopify_raw_us', 'customer_tag' -%}
-
 {%- set sales_channel_exclusion_list = "'"~var("sales_channel_exclusion").split('|')|join("','")~"'" -%}
 
 WITH giftcard_deduction AS 
@@ -20,20 +16,22 @@ WITH giftcard_deduction AS
         (SELECT 
             order_id, 
             SUM(quantity) as items_count,
-            COALESCE(SUM(CASE WHEN gift_card = 'true' THEN quantity END),0) as giftcard_count,
-            COALESCE(SUM(CASE WHEN gift_card = 'true' THEN price * quantity END),0) as giftcard_deduction
+            COALESCE(SUM(CASE WHEN gift_card is true THEN quantity END),0) as giftcard_count,
+            COALESCE(SUM(CASE WHEN gift_card is true THEN price * quantity END),0) as giftcard_deduction
         FROM {{ ref('shopify_us_line_items') }}
         GROUP BY 1)
     ),
 
     orders AS 
     (SELECT 
-        order_date as date, 
+        order_date as date,
+        cancelled_at::date as cancelled_at,
         order_id, 
         customer_id, 
         customer_order_index,
         gross_revenue - COALESCE(giftcard_deduction,0) as gross_revenue,
-        total_discounts,
+        total_discounts-gross_revenue+subtotal_revenue as shipping_discount,
+        gross_revenue-subtotal_revenue as subtotal_discount,
         discount_rate,
         subtotal_revenue,
         total_tax, 
@@ -43,23 +41,14 @@ WITH giftcard_deduction AS
     FROM {{ ref('shopify_us_orders') }}
     LEFT JOIN giftcard_deduction USING(order_id)
     WHERE giftcard_only = 'false'
-    AND cancelled_at IS NULL
+    --AND cancelled_at IS NULL
     AND source_name NOT IN ({{ sales_channel_exclusion_list }})
     AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
-    {% if is_incremental() -%}
 
-    -- this filter will only be applied on an incremental run
-    AND order_date >= (select max(date)-90 from {{ this }})
-
-    {% endif %}
     ),
 
-    {% set customer_tag_table_exists = check_source_exists(schema_name, customer_tag_table_name) -%}
     customers AS 
     (SELECT customer_id, customer_acquisition_date
-        {%- if customer_tag_table_exists %}
-        , customer_tags
-        {%- endif %}
     FROM {{ ref('shopify_us_customers') }}
     )
 
