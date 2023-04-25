@@ -24,6 +24,7 @@
 
 {%- set line_refund_selected_fields = [
     "refund_id",
+    "quantity",
     "subtotal",
     "total_tax"
 ] -%}
@@ -74,16 +75,6 @@ WITH
     FROM adjustment_raw_data
     ),
 
-    adjustment AS 
-    (SELECT 
-        refund_id,
-        SUM(CASE WHEN refund_kind = 'refund_discrepancy' THEN refund_amount END) as subtotal_refund,
-        SUM(CASE WHEN refund_kind = 'shipping_refund' THEN refund_amount END) as shipping_refund,
-        SUM(refund_tax_amount) as tax_refund
-    FROM adjustment_staging
-    GROUP BY refund_id
-    ),
-
     line_refund_raw_data AS 
     ({{ dbt_utils.union_relations(relations = line_refund_raw_tables) }}),
 
@@ -100,21 +91,54 @@ WITH
 
     line_refund AS 
     (SELECT 
-        refund_id, 
-        SUM(refund_subtotal) as subtotal_refund,
-        SUM(refund_total_tax) as tax_refund
+        refund_id,
+        COALESCE(SUM(refund_quantity),0) as quantity_refund, 
+        COALESCE(SUM(refund_subtotal),0) as subtotal_refund,
+        COALESCE(SUM(refund_total_tax),0) as total_tax_refund
     FROM line_refund_staging
     GROUP BY refund_id
-    )
+    ),
 
-    SELECT order_id, 
+    refund_adjustment AS
+    (SELECT
+        order_id,
         refund_id,
         processed_at as refund_date,
-        ABS(COALESCE(SUM(adjustment.subtotal_refund),0)) as subtotal_order_refund,
-        COALESCE(SUM(line_refund.subtotal_refund),0) as subtotal_line_refund,
-        ABS(COALESCE(SUM(shipping_refund),0)) as shipping_refund,
-        ABS(COALESCE(SUM(adjustment.tax_refund),0)) + COALESCE(SUM(line_refund.tax_refund),0) as tax_refund
-    FROM refund_staging
-    LEFT JOIN adjustment USING(refund_id)
-    LEFT JOIN line_refund USING(refund_id)
-    GROUP BY order_id, refund_id, refund_date
+        CASE WHEN refund_kind ~* 'refund_discrepancy' THEN COALESCE(refund_amount,0) ELSE 0 END AS amount_discrepancy_refund,
+        CASE WHEN refund_kind ~* 'refund_discrepancy' THEN COALESCE(refund_tax_amount,0) ELSE 0 END AS tax_amount_discrepancy_refund,
+        CASE WHEN refund_kind ~* 'shipping_refund' THEN COALESCE(refund_amount,0) ELSE 0 END AS amount_shipping_refund,
+        CASE WHEN refund_kind ~* 'shipping_refund' THEN COALESCE(refund_tax_amount,0) ELSE 0 END AS tax_amount_shipping_refund
+        FROM refund_staging LEFT JOIN adjustment_staging USING(refund_id)
+    ),
+
+    refund_adjustment_line_refund AS 
+    (SELECT 
+        order_id,
+        refund_id,
+        refund_date,
+        COALESCE(quantity_refund,0) AS quantity_refund,
+        amount_discrepancy_refund,
+        tax_amount_discrepancy_refund,
+        amount_shipping_refund,
+        tax_amount_shipping_refund,
+        COALESCE(subtotal_refund,0) AS subtotal_refund,
+        COALESCE(total_tax_refund,0) AS total_tax_refund
+        FROM refund_adjustment
+        LEFT JOIN line_refund USING(refund_id)
+        --LEFT JOIN shopify_raw.order ON (order_id = id)
+        --WHERE cancelled_at is null
+    )
+
+    SELECT 
+        order_id, 
+        refund_id,
+        refund_date,
+        quantity_refund,
+        SUM(amount_discrepancy_refund) AS amount_discrepancy_refund,
+        tax_amount_discrepancy_refund,
+        SUM(amount_shipping_refund) AS amount_shipping_refund,
+        SUM(tax_amount_shipping_refund) AS tax_amount_shipping_refund,
+        subtotal_refund,
+        total_tax_refund
+    FROM refund_adjustment_line_refund
+    GROUP BY 1,2,3,4,6,9,10
