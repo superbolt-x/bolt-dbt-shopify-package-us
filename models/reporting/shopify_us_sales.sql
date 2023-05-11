@@ -14,7 +14,7 @@ WITH
         SUM(COALESCE(subtotal_refund,0)) as subtotal_refund,
         SUM(COALESCE(shipping_refund,0)) as shipping_refund,
         SUM(COALESCE(tax_refund,0)) as tax_refund,
-        SUM(COALESCE(subtotal_refund,0)+COALESCE(shipping_refund,0)+COALESCE(tax_refund,0)) as total_refund
+        SUM(COALESCE(subtotal_refund,0)-COALESCE(shipping_refund,0)-COALESCE(tax_refund,0)) as total_refund
     FROM {{ ref('shopify_us_daily_refunds') }}
     WHERE cancelled_at is null
     GROUP BY date_granularity, {{date_granularity}}
