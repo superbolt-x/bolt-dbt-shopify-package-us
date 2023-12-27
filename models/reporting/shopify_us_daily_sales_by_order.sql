@@ -26,6 +26,7 @@ WITH giftcard_deduction AS
     (SELECT 
         order_date as date,
         cancelled_at::date as cancelled_at,
+        customer_first_order_date as customer_acquisition_date,
         order_id, 
         customer_id, 
         customer_order_index,
@@ -45,15 +46,9 @@ WITH giftcard_deduction AS
     AND source_name NOT IN ({{ sales_channel_exclusion_list }})
     AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
 
-    ),
-
-    customers AS 
-    (SELECT customer_id, customer_acquisition_date
-    FROM {{ ref('shopify_us_customers') }}
     )
 
 SELECT *,
     {{ get_date_parts('date') }},
     date||'_'||order_id as unique_key
 FROM orders 
-LEFT JOIN customers USING(customer_id)
