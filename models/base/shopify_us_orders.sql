@@ -258,7 +258,7 @@ WITH
     )
 
 SELECT *,
-    created_at::date as order_date, 
+    processed_at::date as order_date, 
     {{ get_date_parts('order_date') }},
     COALESCE(total_discounts/NULLIF(gross_revenue,0),0) as discount_rate,
     -- exclude cancelled orders vs Shopify includes cancelled orders
