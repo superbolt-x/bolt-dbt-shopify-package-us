@@ -16,11 +16,6 @@ WITH orders AS
     GROUP BY date, customer_id
     ),
 
-    customers AS 
-    (SELECT customer_id, customer_acquisition_date
-    FROM {{ ref('shopify_us_customers') }} 
-    ),
-
     sales AS 
     (SELECT *, 
         subtotal_sales - COALESCE(returns,0) as net_sales
@@ -48,4 +43,3 @@ WITH orders AS
 SELECT *,
     date||'_'||customer_id as unique_key
 FROM sales 
-LEFT JOIN customers USING(customer_id)
