@@ -32,7 +32,6 @@
     "subtotal_price",
     "total_tax",
     "total_price",
-    "total_price_usd",
     "original_total_duties_set",
     "current_total_discounts",
     "current_subtotal_price",
