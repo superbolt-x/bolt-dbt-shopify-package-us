@@ -1,6 +1,6 @@
 {%- macro get_shopify_clean_field(table_name, column_name) -%}
 
- {%- if '_at' in column_name and table_name != 'customer' -%}
+ {%- if '_at' in column_name and table_name != 'customer' and column_name != 'published_at' -%}
         {{column_name}} at time zone '{{var("time_zone")}}' as {{column_name}}
 
 {%- elif table_name == 'order' %}
