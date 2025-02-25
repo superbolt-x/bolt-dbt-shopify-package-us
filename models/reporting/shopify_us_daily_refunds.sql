@@ -2,6 +2,8 @@
     alias = target.database + '_shopify_us_daily_refunds'
 )}}
 
+{%- set shipping_country_inclusion_list = "'"~var("shipping_countries_included").split('|')|join("','")~"'" -%}
+    
 WITH
 
     giftcard_deduction AS 
