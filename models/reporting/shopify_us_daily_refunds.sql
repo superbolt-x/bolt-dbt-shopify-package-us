@@ -31,6 +31,9 @@ WITH
         sum(total_tax_refund) + sum(tax_amount_discrepancy_refund) + sum(tax_amount_shipping_refund) as tax_refund
     FROM {{ ref('shopify_us_refunds') }}
     LEFT JOIN giftcard_deduction USING(order_id)
+    {%- if var('shipping_countries_included') != 'dummy' %}
+    WHERE shipping_address_country_code IN ({{ shipping_country_inclusion_list }})
+    {%- endif %}
     GROUP BY date, refund_id, order_id
     ),
 
