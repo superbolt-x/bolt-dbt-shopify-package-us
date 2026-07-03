@@ -1,24 +1,24 @@
 {{ config (
-    alias = target.database + '_shopify_daily_sales_by_order_line_item',
+    alias = target.database + '_shopify_us_daily_sales_by_order_line_item',
     materialized='incremental',
     unique_key='unique_key',
     on_schema_change='append_new_columns'
 )}}
 
 
-WITH orders AS 
+WITH orders AS
     (SELECT *
-    FROM {{ ref('shopify_daily_sales_by_order') }}
+    FROM {{ ref('shopify_us_daily_sales_by_order') }}
     ),
 
-    line_items AS 
+    line_items AS
     (SELECT *
-    FROM {{ ref('shopify_line_items') }}
+    FROM {{ ref('shopify_us_line_items') }}
     ),
 
     products AS
     (SELECT product_id, product_type, product_tags, product_handle, product_status, count(*)
-    FROM {{ ref('shopify_products') }}
+    FROM {{ ref('shopify_us_products') }}
     GROUP BY 1,2,3,4,5
     ),
 
