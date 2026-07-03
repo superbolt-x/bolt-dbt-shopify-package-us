@@ -7,18 +7,16 @@
 
 
 {%- set sales_channel_exclusion_list = "'"~var("sales_channel_exclusion").split('|')|join("','")~"'" -%}
-{%- set sales_channel_inclusion_list = "'"~var("sales_channel_inclusion").split('|')|join("','")~"'" -%}
-{%- set shipping_country_exclusion_list = "'"~var("shipping_countries_excluded").split('|')|join("','")~"'" -%}
 {%- set shipping_country_inclusion_list = "'"~var("shipping_countries_included").split('|')|join("','")~"'" -%}
 
-WITH giftcard_deduction AS 
-    (SELECT 
-        order_id, 
+WITH giftcard_deduction AS
+    (SELECT
+        order_id,
         CASE WHEN items_count = giftcard_count THEN 'true' ELSE 'false' END as giftcard_only,
         giftcard_deduction
-    FROM 
-        (SELECT 
-            order_id, 
+    FROM
+        (SELECT
+            order_id,
             SUM(quantity) as items_count,
             COALESCE(SUM(CASE WHEN gift_card is true THEN quantity END),0) as giftcard_count,
             COALESCE(SUM(CASE WHEN gift_card is true THEN price * quantity END),0) as giftcard_deduction
@@ -26,21 +24,21 @@ WITH giftcard_deduction AS
         GROUP BY 1)
     ),
 
-    orders AS 
-    (SELECT 
+    orders AS
+    (SELECT
         order_date as date,
         cancelled_at::date as cancelled_at,
         customer_first_order_date as customer_acquisition_date,
-        order_id, 
-        customer_id, 
+        order_id,
+        customer_id,
         customer_order_index,
-        gross_revenue - COALESCE(giftcard_deduction,0) as gross_revenue,
+        gross_revenue - COALESCE(giftcard_deduction,0) as gross_re
         total_discounts-gross_revenue+subtotal_revenue as shipping_discount,
         gross_revenue-subtotal_revenue as subtotal_discount,
         discount_rate,
         subtotal_revenue,
-        total_tax, 
-        shipping_price, 
+        total_tax,
+        shipping_price,
         total_revenue,
         order_tags,
         order_name,
@@ -60,31 +58,18 @@ WITH giftcard_deduction AS
         created_at,
         processed_at,
         customer_last_order_date
-
     FROM {{ ref('shopify_us_orders') }}
     LEFT JOIN giftcard_deduction USING(order_id)
     WHERE giftcard_only = 'false'
     --AND cancelled_at IS NULL
+    AND source_name NOT IN ({{ sales_channel_exclusion_list }})
     AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
-    AND (email !~* '{{ var("email_address_exclusion")}}' OR email IS NULL)
-    {%- if var('financial_status') != 'dummy' %}
-    AND financial_status ~* '{{ var("financial_status")}}'
-    {%- endif %}
-    {%- if var('shipping_countries_excluded') != 'dummy' %}
-    AND (shipping_address_country_code NOT IN ({{ shipping_country_exclusion_list }}) OR shipping_address_country_code IS NULL)
-    {%- endif %}
     {%- if var('shipping_countries_included') != 'dummy' %}
     AND shipping_address_country_code IN ({{ shipping_country_inclusion_list }})
-    {%- endif %}
-    {%- if var('sales_channel_exclusion') != 'dummy' %}
-    AND (source_name NOT IN ({{ sales_channel_exclusion_list }}) OR source_name IS NULL)
-    {%- endif %}
-    {%- if var('sales_channel_inclusion') != 'dummy' %}
-    AND source_name IN ({{ sales_channel_inclusion_list }})
     {%- endif %}
     )
 
 SELECT *,
     {{ get_date_parts('date') }},
     date||'_'||order_id as unique_key
-FROM orders 
+FROM orders
