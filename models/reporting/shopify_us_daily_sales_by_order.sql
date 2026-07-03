@@ -1,11 +1,14 @@
 {{ config (
-    alias = target.database + '_shopify_us_daily_sales_by_order',
+    alias = target.database + '_shopify_daily_sales_by_order',
     materialized='incremental',
-    unique_key='unique_key'
+    unique_key='unique_key',
+    on_schema_change='append_new_columns'
 )}}
 
 
 {%- set sales_channel_exclusion_list = "'"~var("sales_channel_exclusion").split('|')|join("','")~"'" -%}
+{%- set sales_channel_inclusion_list = "'"~var("sales_channel_inclusion").split('|')|join("','")~"'" -%}
+{%- set shipping_country_exclusion_list = "'"~var("shipping_countries_excluded").split('|')|join("','")~"'" -%}
 {%- set shipping_country_inclusion_list = "'"~var("shipping_countries_included").split('|')|join("','")~"'" -%}
 
 WITH giftcard_deduction AS 
@@ -19,7 +22,7 @@ WITH giftcard_deduction AS
             SUM(quantity) as items_count,
             COALESCE(SUM(CASE WHEN gift_card is true THEN quantity END),0) as giftcard_count,
             COALESCE(SUM(CASE WHEN gift_card is true THEN price * quantity END),0) as giftcard_deduction
-        FROM {{ ref('shopify_us_line_items') }}
+        FROM {{ ref('shopify_line_items') }}
         GROUP BY 1)
     ),
 
@@ -39,15 +42,45 @@ WITH giftcard_deduction AS
         total_tax, 
         shipping_price, 
         total_revenue,
-        order_tags
-    FROM {{ ref('shopify_us_orders') }}
+        order_tags,
+        order_name,
+        email,
+        financial_status,
+        fulfillment_status,
+        currency,
+        source_name,
+        referring_site,
+        landing_site_base_url,
+        shipping_address_country,
+        shipping_address_country_code,
+        shipping_address_province,
+        shipping_address_city,
+        shipping_address_zip,
+        discount_code,
+        created_at,
+        processed_at,
+        customer_last_order_date
+
+    FROM {{ ref('shopify_orders') }}
     LEFT JOIN giftcard_deduction USING(order_id)
     WHERE giftcard_only = 'false'
     --AND cancelled_at IS NULL
-    AND source_name NOT IN ({{ sales_channel_exclusion_list }})
     AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
+    AND (email !~* '{{ var("email_address_exclusion")}}' OR email IS NULL)
+    {%- if var('financial_status') != 'dummy' %}
+    AND financial_status ~* '{{ var("financial_status")}}'
+    {%- endif %}
+    {%- if var('shipping_countries_excluded') != 'dummy' %}
+    AND (shipping_address_country_code NOT IN ({{ shipping_country_exclusion_list }}) OR shipping_address_country_code IS NULL)
+    {%- endif %}
     {%- if var('shipping_countries_included') != 'dummy' %}
     AND shipping_address_country_code IN ({{ shipping_country_inclusion_list }})
+    {%- endif %}
+    {%- if var('sales_channel_exclusion') != 'dummy' %}
+    AND (source_name NOT IN ({{ sales_channel_exclusion_list }}) OR source_name IS NULL)
+    {%- endif %}
+    {%- if var('sales_channel_inclusion') != 'dummy' %}
+    AND source_name IN ({{ sales_channel_inclusion_list }})
     {%- endif %}
     )
 
