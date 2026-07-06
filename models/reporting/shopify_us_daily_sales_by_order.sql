@@ -37,6 +37,7 @@ WITH giftcard_deduction AS
         gross_revenue-subtotal_revenue as subtotal_discount,
         discount_rate,
         subtotal_revenue,
+        current_subtotal_price,
         total_tax,
         shipping_price,
         total_revenue,
