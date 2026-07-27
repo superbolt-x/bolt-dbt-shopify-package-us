@@ -2,6 +2,7 @@
     alias = target.database + '_shopify_us_daily_sales_by_order',
     materialized='incremental',
     unique_key='unique_key',
+    incremental_strategy='delete+insert',
     on_schema_change='append_new_columns'
 )}}
 
@@ -75,6 +76,11 @@ WITH giftcard_deduction AS
     AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
     {%- if var('shipping_countries_included') != 'dummy' %}
     AND shipping_address_country_code IN ({{ shipping_country_inclusion_list }})
+    {%- endif %}
+    {%- if is_incremental() %}
+    -- 30-day lookback: order-level fields (financial_status, cancellations, refunds) can
+    -- still change within this window. Run --full-refresh periodically for late changes.
+    AND order_date >= (select max(date)-30 from {{ this }})
     {%- endif %}
     )
 
