@@ -2,6 +2,7 @@
     alias = target.database + '_shopify_us_daily_sales_by_order_line_item',
     materialized='incremental',
     unique_key='unique_key',
+    incremental_strategy='delete+insert',
     on_schema_change='append_new_columns'
 )}}
 
@@ -9,6 +10,11 @@
 WITH orders AS
     (SELECT *
     FROM {{ ref('shopify_us_daily_sales_by_order') }}
+    {%- if is_incremental() %}
+    -- 30-day lookback, same window as shopify_us_daily_sales_by_order. Run --full-refresh
+    -- periodically for late changes (refunds/cancellations outside the window).
+    WHERE date >= (select max(date)-30 from {{ this }})
+    {%- endif %}
     ),
 
     line_items AS
@@ -22,15 +28,15 @@ WITH orders AS
     GROUP BY 1,2,3,4,5
     ),
 
-    sales AS 
-    (SELECT 
+    sales AS
+    (SELECT
         date,
         cancelled_at,
-        order_id, 
+        order_id,
         customer_id,
         customer_acquisition_date,
         customer_order_index,
-        order_tags, 
+        order_tags,
         order_line_id,
         product_id,
         variant_id,
@@ -50,7 +56,7 @@ WITH orders AS
         (price * quantity) * COALESCE(subtotal_revenue / NULLIF(gross_revenue,0)) as subtotal_sales,
         (price * quantity) * COALESCE(total_revenue / NULLIF(gross_revenue,0)) as total_sales,
         quantity - COALESCE(refund_quantity,0) as net_quantity
-    FROM orders 
+    FROM orders
     LEFT JOIN line_items USING(order_id)
     )
 
