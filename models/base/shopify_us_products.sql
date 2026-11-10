@@ -9,6 +9,7 @@
     "title",
     "handle",
     "product_type",
+    "vendor",
     "status",
     "created_at",
     "updated_at",

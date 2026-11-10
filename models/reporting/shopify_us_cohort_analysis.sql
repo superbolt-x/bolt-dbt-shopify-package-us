@@ -8,6 +8,7 @@ WITH
     orders AS (
       SELECT order_id, date AS order_date, subtotal_revenue, customer_id, customer_acquisition_date::date AS customer_acquisition_day, customer_order_index
       FROM {{ ref('shopify_us_daily_sales_by_order') }}
+      WHERE cancelled_at is null
     ),
     
     {%- for date_granularity in date_granularity_list %}

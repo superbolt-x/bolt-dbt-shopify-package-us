@@ -2,8 +2,11 @@
     alias = target.database + '_shopify_us_daily_refunds'
 )}}
 
+{%- set sales_channel_exclusion_list = "'"~var("sales_channel_exclusion").split('|')|join("','")~"'" -%}
+{%- set sales_channel_inclusion_list = "'"~var("sales_channel_inclusion").split('|')|join("','")~"'" -%}
+{%- set shipping_country_exclusion_list = "'"~var("shipping_countries_excluded").split('|')|join("','")~"'" -%}
 {%- set shipping_country_inclusion_list = "'"~var("shipping_countries_included").split('|')|join("','")~"'" -%}
-    
+
 WITH
 
     giftcard_deduction AS 
@@ -40,8 +43,29 @@ WITH
     ),
 
     order_customer AS 
-    (SELECT order_id, customer_id, cancelled_at
+    (SELECT order_id, customer_id, cancelled_at, customer_order_index
     FROM {{ ref('shopify_us_orders') }}
+    WHERE 1=1
+    AND (order_tags !~* '{{ var("order_tags_keyword_exclusion")}}' OR order_tags IS NULL)
+    AND (email !~* '{{ var("email_address_exclusion")}}' OR email IS NULL)
+    {%- if var('financial_status') != 'dummy' %}
+    AND financial_status ~* '{{ var("financial_status")}}'
+    {%- endif %}
+    {%- if var('order_test') != 'dummy' %}
+    AND "test" !~* '{{ var("order_test")}}'
+    {%- endif %}
+    {%- if var('shipping_countries_excluded') != 'dummy' %}
+    AND (shipping_address_country_code NOT IN ({{ shipping_country_exclusion_list }}) OR shipping_address_country_code IS NULL)
+    {%- endif %}
+    {%- if var('shipping_countries_included') != 'dummy' %}
+    AND shipping_address_country_code IN ({{ shipping_country_inclusion_list }})
+    {%- endif %}
+    {%- if var('sales_channel_exclusion') != 'dummy' %}
+    AND (source_name NOT IN ({{ sales_channel_exclusion_list }}) OR source_name IS NULL)
+    {%- endif %}
+    {%- if var('sales_channel_inclusion') != 'dummy' %}
+    AND source_name IN ({{ sales_channel_inclusion_list }})
+    {%- endif %}
     )
 
 SELECT *,

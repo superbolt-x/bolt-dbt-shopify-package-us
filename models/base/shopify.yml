@@ -17,6 +17,7 @@ sources:
       - name: transaction
       - name: order_line
       - name: order_line_refund
+      - name: refund_line_item
       - name: product
       - name: product_variant
       - name: product_tag

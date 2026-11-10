@@ -41,11 +41,10 @@
     "subtotal",
     "total_tax"
 ] -%}
-
+        
 {%- set order_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'order') -%}
 {%- set refund_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'refund') -%}
 {%- set adjustment_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'order_adjustment') -%}
-{%- set line_refund_raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'order_line_refund') -%}
 
 WITH 
     -- To tackle the signal loss between Fivetran and Shopify transformations
@@ -68,7 +67,7 @@ WITH
 
     FROM order_raw_data
     ),
-        
+
     refund_raw_data AS 
     ({{ dbt_utils.union_relations(relations = refund_raw_tables) }}),
 
@@ -98,7 +97,7 @@ WITH
     ),
 
     line_refund_raw_data AS 
-    ({{ dbt_utils.union_relations(relations = line_refund_raw_tables) }}),
+    ({{ get_shopify_refund_line_items() }}),
 
     line_refund_staging AS 
     (SELECT 
@@ -147,7 +146,7 @@ WITH
         COALESCE(total_tax_refund,0) AS total_tax_refund
         FROM refund_adjustment
         LEFT JOIN line_refund USING(refund_id)
-        --LEFT JOIN shopify_raw.order ON (order_id = id)
+        --LEFT JOIN shopify_raw_us.order ON (order_id = id)
         --WHERE cancelled_at is null
     )
 
@@ -157,12 +156,15 @@ WITH
         refund_date,
         quantity_refund,
         shipping_address_country_code,
-        SUM(amount_discrepancy_refund) AS amount_discrepancy_refund,
-        tax_amount_discrepancy_refund,
-        SUM(amount_shipping_refund) AS amount_shipping_refund,
-        SUM(tax_amount_shipping_refund) AS tax_amount_shipping_refund,
-        subtotal_refund,
-        total_tax_refund
+        SUM(amount_discrepancy_refund){{ shopify_fx_agg() }} AS amount_discrepancy_refund,
+        tax_amount_discrepancy_refund{{ shopify_fx_agg() }} AS tax_amount_discrepancy_refund,
+        SUM(amount_shipping_refund){{ shopify_fx_agg() }} AS amount_shipping_refund,
+        SUM(tax_amount_shipping_refund){{ shopify_fx_agg() }} AS tax_amount_shipping_refund,
+        subtotal_refund{{ shopify_fx_agg() }} AS subtotal_refund,
+        total_tax_refund{{ shopify_fx_agg() }} AS total_tax_refund
     FROM refund_adjustment_line_refund
     LEFT JOIN order_staging USING(order_id)
-    GROUP BY 1,2,3,4,5,7,10,11
+    {{ shopify_fx_join('ON fx.fx_order_id = refund_adjustment_line_refund.order_id') }}
+    GROUP BY refund_adjustment_line_refund.order_id, refund_adjustment_line_refund.refund_id, refund_adjustment_line_refund.refund_date,
+        refund_adjustment_line_refund.quantity_refund, order_staging.shipping_address_country_code,
+        refund_adjustment_line_refund.tax_amount_discrepancy_refund, refund_adjustment_line_refund.subtotal_refund, refund_adjustment_line_refund.total_tax_refund

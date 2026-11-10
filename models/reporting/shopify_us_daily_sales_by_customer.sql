@@ -42,4 +42,4 @@ WITH orders AS
 
 SELECT *,
     date||'_'||customer_id as unique_key
-FROM sales 
+FROM sales

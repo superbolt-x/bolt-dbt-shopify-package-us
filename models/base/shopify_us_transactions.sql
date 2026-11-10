@@ -14,7 +14,13 @@
         table_name
         = 'shopify_raw_us', 'transaction' -%}
 
-WITH raw_table AS 
+{%- set raw_tables = dbt_utils.get_relations_by_pattern('shopify_raw_us%', 'transaction') -%}
+
+WITH raw_data AS 
+    ({{ dbt_utils.union_relations(relations = raw_tables) }}
+    ),
+    
+    staging AS 
     (SELECT 
 
         {% for column in selected_fields -%}
@@ -22,18 +28,20 @@ WITH raw_table AS
         {%- if not loop.last %},{% endif %}
         {% endfor %}
 
-    FROM {{ source(schema_name, table_name) }}),
+    FROM raw_data
+    ),
 
-    staging AS 
+    transactions AS 
     (SELECT 
         order_id, 
-        created_at::date as transaction_date,
-        COALESCE(SUM(CASE WHEN kind in ('sale','authorization') THEN transaction_amount END),0) as paid_by_customer,
-        COALESCE(SUM(CASE WHEN kind = 'refund' THEN transaction_amount END),0) as refunded
-    FROM raw_table
+        processed_at::date as transaction_date,
+        COALESCE(SUM(CASE WHEN kind in ('sale','authorization') THEN transaction_amount END),0){{ shopify_fx_agg() }} as paid_by_customer,
+        COALESCE(SUM(CASE WHEN kind = 'refund' THEN transaction_amount END),0){{ shopify_fx_agg() }} as refunded
+    FROM staging
+    {{ shopify_fx_join('ON fx.fx_order_id = staging.order_id') }}
     WHERE status = 'success'
     GROUP BY order_id, transaction_date)
 
 SELECT *,
     order_id||'_'||transaction_date as unique_key
-FROM staging
+FROM transactions
