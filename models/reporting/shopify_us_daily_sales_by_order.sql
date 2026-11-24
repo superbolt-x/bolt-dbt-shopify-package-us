@@ -30,6 +30,8 @@ WITH giftcard_deduction AS
         GROUP BY 1)
     ),
 
+    -- No personal data in reporting (2026-11-24 security review): email, names, phone and street address stay in
+    -- the base layer. Cohorts use customer_id / customer_order_index / customer_acquisition_date.
     orders AS
     (SELECT
         order_date as date,
@@ -49,7 +51,6 @@ WITH giftcard_deduction AS
         total_revenue,
         order_tags,
         order_name,
-        email,
         financial_status,
         fulfillment_status,
         currency,
@@ -61,10 +62,6 @@ WITH giftcard_deduction AS
         shipping_address_province,
         shipping_address_city,
         shipping_address_zip,
-        billing_address_first_name,
-        billing_address_last_name,
-        billing_address_phone,
-        billing_address_address_1,
         billing_address_city,
         billing_address_country_code,
         billing_address_province,
